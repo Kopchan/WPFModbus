@@ -5,6 +5,7 @@ using WPFModbus.Models;
 using System.Windows.Media;
 using System.Linq;
 using System;
+using System.Text;
 
 namespace WPFModbus.Views
 {
@@ -63,11 +64,23 @@ namespace WPFModbus.Views
                 },
                 WriteTimeout = Properties.Settings.Default.PortTimeout,
             };
-            port.DtrEnable = true;
-            port.RtsEnable = true;
-            ViewModel.Port = port;
-            port.Open();
-            StartRead();
+            try
+            {
+                //port.DtrEnable = true;
+                //port.RtsEnable = true;
+                ViewModel.Port = port;
+                port.Open();
+                StartRead();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(
+                    "Для работы с программый необходимо выбрать не закрытый порт",
+                    "Выберите порт",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+            }
         }
 
         // Обработка входящих данных
@@ -75,19 +88,23 @@ namespace WPFModbus.Views
         {
             Task.Run(() =>
             {
+                //Thread.Sleep(1000);
                 ulong i = 0;
-                while (port.IsOpen == true)
+                while (port.IsOpen)
                 {
+                    Thread.Sleep(100);
                     int bytes = port.BytesToRead;
-                    MessageBox.Show(bytes.ToString());
+                    if (bytes < 1) continue;
 
                     byte[] buffer = new byte[bytes];
                     port.Read(buffer, 0, bytes);
 
-                    //MessageBox.Show(String.Join(' ', buffer));
+                    MessageBox.Show("DEV: " + String.Join(' ', buffer));
+                    // FIXME: Не работает добавление в список
                     ViewModel.ReceivedLines.Add(new ReceivedLine(i, DateTime.Now, buffer));
                     i++;
                 }
+                MessageBox.Show("DEV: end read task");
             }, cancelRead.Token);
         }
 
@@ -142,8 +159,24 @@ namespace WPFModbus.Views
 
             bool isChanged = window.ShowDialog() ?? true;
             if (isChanged) Init();
-            else port.Open();
-            ViewModel.ReceivedLines.Add(new ReceivedLine(28, DateTime.Now, [34, 43, 54]));
+            else
+            {
+                try
+                {
+                    port.Open();
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show(
+                        "Для работы с программый необходимо выбрать не закрытый порт",
+                        "Выберите порт",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning
+                    );
+                }
+            }
+
+            ViewModel.ReceivedLines.Add(new ReceivedLine(28, DateTime.Now, ASCIIEncoding.ASCII.GetBytes("DEV: Test add on setup")));
         }
 
         private void Exit_MI_Click(object sender, RoutedEventArgs e) => Close();

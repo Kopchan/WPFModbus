@@ -12,7 +12,7 @@ namespace WPFModbus.Models
         public DateTime DateTime   { get; set; }
         public string   TimeString => DateTime.ToString("HH:mm:ss.fff");
         public byte[]   Data       { get; set; }
-        public string   DataString => String.Join(' ', Data);
+        public string   DataString => BitConverter.ToString(Data).Replace('-', ' ');
         public string   Text => Encoding.ASCII.GetString(Data);
         
         public ReceivedLine(ulong id, DateTime dateTime, byte[] data) 
