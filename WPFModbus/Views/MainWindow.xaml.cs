@@ -6,6 +6,9 @@ using System.Windows.Media;
 using System.Linq;
 using System;
 using System.Text;
+using System.Collections.Specialized;
+using System.Windows.Controls;
+using System.Windows.Shapes;
 
 namespace WPFModbus.Views
 {
@@ -98,10 +101,13 @@ namespace WPFModbus.Views
 
                     byte[] buffer = new byte[bytes];
                     port.Read(buffer, 0, bytes);
+                    ReceivedLine line = new(i, DateTime.Now, buffer);
 
-                    MessageBox.Show("DEV: " + String.Join(' ', buffer));
-                    // FIXME: Не работает добавление в список
-                    ViewModel.ReceivedLines.Add(new ReceivedLine(i, DateTime.Now, buffer));
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        ViewModel.ReceivedLines.Add(line);
+                        Output_DG.ScrollIntoView(line);
+                    });
                     i++;
                 }
                 MessageBox.Show("DEV: end read task");

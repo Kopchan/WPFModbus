@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using WPFModbus.Helpers;
 
 namespace WPFModbus.Models
 {
@@ -13,7 +14,7 @@ namespace WPFModbus.Models
         public string   TimeString => DateTime.ToString("HH:mm:ss.fff");
         public byte[]   Data       { get; set; }
         public string   DataString => BitConverter.ToString(Data).Replace('-', ' ');
-        public string   Text => Encoding.ASCII.GetString(Data);
+        public string   Text => SanitizeString.Sanitize(Data);
         
         public ReceivedLine(ulong id, DateTime dateTime, byte[] data) 
         {

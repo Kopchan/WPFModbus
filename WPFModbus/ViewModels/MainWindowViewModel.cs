@@ -10,7 +10,7 @@ namespace WPFModbus.ViewModels
     {
         [ObservableProperty] public string sendBTContent = "Отправить";
         [ObservableProperty] public SerialPort? port;
-        public ObservableCollection<ReceivedLine> ReceivedLines { get; } =
+        [ObservableProperty] public ObservableCollection<ReceivedLine> receivedLines =
         [
             new ReceivedLine(1, DateTime.Now, ASCIIEncoding.ASCII.GetBytes("DEV: Test add on init")),
             new ReceivedLine(2, DateTime.Now, ASCIIEncoding.ASCII.GetBytes("DEV: Test add on init 2")),
