@@ -7,7 +7,7 @@
         xmlns:sys="clr-namespace:System;assembly=mscorlib"
         mc:Ignorable="d"
         Title="COM порт" 
-        Width="200" 
+        Width="230" 
         SizeToContent="Height" ResizeMode="NoResize">
     <Window.Resources>
         <Style TargetType="DockPanel">
@@ -15,9 +15,10 @@
             <Setter Property="Margin" Value="0 5"/>
         </Style>
         <Style TargetType="ComboBox">
-            <Setter Property="Width" Value="79"/>
+            <Setter Property="Width" Value="92"/>
             <!--<Setter Property="HorizontalContentAlignment" Value="Right"/>-->
             <Setter Property="DockPanel.Dock" Value="Right"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
         <Style TargetType="Button">
             <Setter Property="Height" Value="24"/>
@@ -53,6 +54,32 @@
                         </DataTemplate>
                     </ComboBox.ItemTemplate>
                 </ComboBox>
+                <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Margin="0 0 5 0" FontSize="11">
+                    <Hyperlink Click="RefreshPorts">
+                        <Hyperlink.Style>
+                            <Style TargetType="Hyperlink">
+                                <Setter Property="IsEnabled" Value="True"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsScan}" Value="True">
+                                        <Setter Property="IsEnabled" Value="False"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </Hyperlink.Style>
+                        <TextBlock>
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Text" Value="Обновить"/>
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsScan}" Value="True">
+                                            <Setter Property="Text" Value="Обновляю"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Hyperlink>
+                </TextBlock>
                 <Label>Порт</Label>
             </DockPanel>
             <DockPanel>
@@ -112,7 +139,7 @@
             <Grid Margin="0 10 0 5">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="5"/>
+                    <ColumnDefinition Width="10"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 

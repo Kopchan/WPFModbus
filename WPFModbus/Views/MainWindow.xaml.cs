@@ -18,7 +18,6 @@ namespace WPFModbus.Views
     public partial class MainWindow : Window
     {
         private SerialPort port;
-        private bool isSending = false;
 
         MainWindowViewModel ViewModel { get; } = new();
 
@@ -121,18 +120,19 @@ namespace WPFModbus.Views
         // Обработка исходящих данных
         private void SendMessage(object sender, RoutedEventArgs e)
         {
+            // Очистка ошибки
+            ViewModel.ErrorMessage = "";
+
             // Отмена отправки, если она происходила
-            if (isSending)
+            if (ViewModel.IsSending)
             {
                 port.DiscardOutBuffer();
-                isSending = false;
-                ViewModel.SendBTContent = "Отправить";
+                ViewModel.IsSending = false;
                 return;
             }
 
             // Установка состояние отправки 
-            isSending = true;
-            ViewModel.SendBTContent = "Отмена";
+            ViewModel.IsSending = true;
             var input = Input_TBx.Text;
 
             Task.Run(() =>
@@ -145,18 +145,17 @@ namespace WPFModbus.Views
                 catch (Exception ex)
                 {
                     // Таймаут или другие ошибки
-                    if (isSending) MessageBox.Show(
-                        "Ошибка при отправке: " + (ex is TimeoutException ? "Время вышло" : ex.Message),
-                        "Ошибка отправки",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Error
-                    );
+                    if (ViewModel.IsSending) ViewModel.ErrorMessage = 
+                        "Ошибка при отправке: " + ex switch { 
+                            TimeoutException => "Время ожидания вышло",
+                            UnauthorizedAccessException => "Порт недоступен/закрыт",
+                            _ => ex.Message 
+                        };
                 }
                 finally
                 {
                     // Переключение статуса
-                    isSending = false;
-                    ViewModel.SendBTContent = "Отправить";
+                    ViewModel.IsSending = false;
                 }
             });
         }
@@ -186,7 +185,7 @@ namespace WPFModbus.Views
                 port.Open();
                 StartRead();
             }
-            catch (Exception)
+            catch
             {
                 MessageBox.Show(
                     "Для работы с программой необходимо выбрать не закрытый порт",
@@ -208,6 +207,10 @@ namespace WPFModbus.Views
         // Очистка таблицы
         private void ClearOutput(object sender, RoutedEventArgs e) => 
             ViewModel.ReceivedLines.Clear();
+
+        // Очистка ошибки при вводе
+        private void Input_TBx_TextChanged(object sender, TextChangedEventArgs e) =>
+            ViewModel.ErrorMessage = "";
 
         // Запись размеров и положения окна во время закрытия для последущего восстановление
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
@@ -246,6 +249,31 @@ namespace WPFModbus.Views
 
             if (Properties.Settings.Default.Maximized)
                 WindowState = WindowState.Maximized;
+        }
+
+        private void ConnectionSwitch_MI_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                if (port.IsOpen)
+                {
+                    port.Close();
+                    //ConnectionSwitch_MI.Header = "_Подключиться";
+                    return;
+                }
+                //ConnectionSwitch_MI.Header = "_Отключиться";
+                port.Open();
+                StartRead();
+            }
+            catch
+            {
+                MessageBox.Show(
+                    "Для работы с программой необходимо выбрать не закрытый порт",
+                    "Выберите порт",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+            }
         }
     }
 }

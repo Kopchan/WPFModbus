@@ -16,11 +16,19 @@
                 <MenuItem Header="_Выход" Click="Exit_MI_Click"></MenuItem>
             </MenuItem>
             <MenuItem Header="_Подключение">
-                <MenuItem Header="_Настройка COM порта..." Click="OpenPortSettings"></MenuItem>
-                <!--
-                <MenuItem Header="_Выбранный COM порт" x:Name="COMport_MI"></MenuItem>
-                <MenuItem Header="_Битрейт"  x:Name="Baudrate_MI"></MenuItem>
-                -->
+                <MenuItem Header="_Настройка COM порта..." Click="OpenPortSettings"/>
+                <MenuItem x:Name="ConnectionSwitch_MI" Click="ConnectionSwitch_MI_Click">
+                    <MenuItem.Style>
+                        <Style TargetType="MenuItem">
+                            <Setter Property="Header" Value="_Отключиться"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding PortIsOpen}" Value="False">
+                                    <Setter Property="Header" Value="_Подключиться"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </MenuItem.Style>
+                </MenuItem>
             </MenuItem>
             <MenuItem Header="Вид">
                 <MenuItem Header="Авто">
@@ -66,6 +74,7 @@
             <StatusBarItem Content="{Binding Port.Parity}"/>
             <Separator Background="LightGray"/>
             <StatusBarItem Content="{Binding Port.StopBits}"/>
+            <!-- TODO: Локализировать статус-бар -->
         </StatusBar>
         <DockPanel Margin="5 0">
             <DockPanel DockPanel.Dock="Top">
@@ -75,18 +84,34 @@
             </DockPanel>
             <DockPanel DockPanel.Dock="Top">
                 <Button DockPanel.Dock="Right" Width="100" Margin="5 0 0 0" IsDefault="True"
-                        x:Name="Send_BT" Click="SendMessage" FontSize="14" Content="{Binding SendBTContent}"/>
-                <TextBox x:Name="Input_TBx" FontSize="14">
+                        x:Name="Send_BT" Click="SendMessage" FontSize="14">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Content" Value="Отправить"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsSending}" Value="True">
+                                    <Setter Property="Content" Value="Отмена"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <TextBox x:Name="Input_TBx" FontSize="14"  TextChanged="Input_TBx_TextChanged">
                     input
                 </TextBox>
             </DockPanel>
-            <Separator DockPanel.Dock="Top" Margin="0 10 0 0" Background="Transparent"/>
+            <TextBox Background="Transparent" BorderThickness="0" Text="{Binding ErrorMessage, Mode=OneWay}"
+                     IsReadOnly="True" DockPanel.Dock="Top" FontSize="10" TextAlignment="Center" 
+                     Foreground="Red" TextWrapping="Wrap"/>
+            
             <DockPanel DockPanel.Dock="Top">
-                <TextBlock DockPanel.Dock="Right" Margin="0 0 5 0" VerticalAlignment="Center">
+                <TextBlock DockPanel.Dock="Right" Margin="0 0 5 0" VerticalAlignment="Center" FontSize="11">
                     <Hyperlink Click="ClearOutput">Очистить</Hyperlink>
                 </TextBlock>
                 <Label VerticalAlignment="Center">Вывод:</Label>
             </DockPanel>
+            <!-- FIXME: Нужна натуральная сортировка в столбце Id -->
+            <!-- TODO: Добавить сброс сортировки -->
             <DataGrid x:Name="Output_DG" ItemsSource="{Binding ReceivedLines}" ScrollViewer.ScrollChanged="Output_DG_ScrollChanged"
                       IsReadOnly="True" AutoGenerateColumns="False" HorizontalGridLinesBrush="Gray" VerticalGridLinesBrush="Transparent"
                       CanUserResizeRows="False" HeadersVisibility="Column">
