@@ -28,6 +28,11 @@
         <StackPanel>
             <DockPanel>
                 <ComboBox x:Name="Ports_CB" SelectedValuePath="Name">
+                    <ComboBox.ItemContainerStyle>
+                        <Style TargetType="{x:Type ComboBoxItem}">
+                            <Setter Property="IsEnabled" Value="{Binding IsAvaliable}"/>
+                        </Style>
+                    </ComboBox.ItemContainerStyle>
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal">

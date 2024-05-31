@@ -18,7 +18,6 @@ namespace WPFModbus.Views
     public partial class MainWindow : Window
     {
         private SerialPort port;
-        CancellationTokenSource cancelRead = new();
         private bool isSending = false;
 
         MainWindowViewModel ViewModel { get; } = new();
@@ -37,7 +36,7 @@ namespace WPFModbus.Views
             }
             catch
             {
-                var window = new PortSettingsWindow();
+                PortSettingsWindow window = new();
                 window.ShowDialog();
             }
             Init();
@@ -69,8 +68,6 @@ namespace WPFModbus.Views
             };
             try
             {
-                //port.DtrEnable = true;
-                //port.RtsEnable = true;
                 ViewModel.Port = port;
                 port.Open();
                 StartRead();
@@ -78,7 +75,7 @@ namespace WPFModbus.Views
             catch (Exception)
             {
                 MessageBox.Show(
-                    "Для работы с программый необходимо выбрать не закрытый порт",
+                    "Для работы с программой необходимо выбрать не закрытый порт",
                     "Выберите порт",
                     MessageBoxButton.OK,
                     MessageBoxImage.Warning
@@ -91,27 +88,34 @@ namespace WPFModbus.Views
         {
             Task.Run(() =>
             {
-                //Thread.Sleep(1000);
-                ulong i = 0;
-                while (port.IsOpen)
+                for (ulong i = 0;;)
                 {
-                    Thread.Sleep(100);
-                    int bytes = port.BytesToRead;
-                    if (bytes < 1) continue;
+                    // Остановка задачи чтения, если порт вдруг закрыт
+                    ViewModel.PortIsOpen = port.IsOpen;
+                    if (!ViewModel.PortIsOpen) break;
 
+                    // Усыпление задачи, если нет байтов для чтения
+                    int bytes = port.BytesToRead;
+                    if (bytes < 1) 
+                    {
+                        Thread.Sleep(100);
+                        continue;
+                    }
+                    i++;
+
+                    // Чтение полученных данных
                     byte[] buffer = new byte[bytes];
                     port.Read(buffer, 0, bytes);
                     ReceivedLine line = new(i, DateTime.Now, buffer);
 
+                    // Запись данных в таблицу в основном потоке
                     Application.Current.Dispatcher.Invoke(() =>
                     {
                         ViewModel.ReceivedLines.Add(line);
-                        Output_DG.ScrollIntoView(line);
+                        if (ViewModel.InBottomDG) Output_DG.ScrollIntoView(line);
                     });
-                    i++;
                 }
-                MessageBox.Show("DEV: end read task");
-            }, cancelRead.Token);
+            });
         }
 
         // Обработка исходящих данных
@@ -160,33 +164,88 @@ namespace WPFModbus.Views
         // Открытие настроек, отключаясь от порта
         private void OpenPortSettings(object sender, RoutedEventArgs e)
         {
+            // Закрытие порта (остановка чтения)
             port.Close();
+
+            // Создание окна в центре родителя
             PortSettingsWindow window = new();
+            window.Owner = this;
+            window.Left = Left + (ActualWidth  - window.Width ) / 2;
+            window.Top  = Top  + (ActualHeight - 300) / 2;
 
+            // Переинициализация подключение к порту, если настройки изменили (сохранили)
             bool isChanged = window.ShowDialog() ?? true;
-            if (isChanged) Init();
-            else
+            if (isChanged)
             {
-                try
-                {
-                    port.Open();
-                }
-                catch (Exception)
-                {
-                    MessageBox.Show(
-                        "Для работы с программый необходимо выбрать не закрытый порт",
-                        "Выберите порт",
-                        MessageBoxButton.OK,
-                        MessageBoxImage.Warning
-                    );
-                }
+                Init();
+                return;
             }
-
-            ViewModel.ReceivedLines.Add(new ReceivedLine(28, DateTime.Now, ASCIIEncoding.ASCII.GetBytes("DEV: Test add on setup")));
+            // Иначе попытка открыть старое соединение
+            try
+            {
+                port.Open();
+                StartRead();
+            }
+            catch (Exception)
+            {
+                MessageBox.Show(
+                    "Для работы с программой необходимо выбрать не закрытый порт",
+                    "Выберите порт",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning
+                );
+            }
         }
 
-        private void Exit_MI_Click(object sender, RoutedEventArgs e) => Close();
+        // Обработка скролла для статуса "внизу таблицы" (для отключения автоскролла до новых записей)
+        private void Output_DG_ScrollChanged(object sender, ScrollChangedEventArgs e) =>
+            ViewModel.InBottomDG = e.VerticalOffset == e.ExtentHeight - e.ViewportHeight;
 
-        private void ClearOutput(object sender, RoutedEventArgs e) => ViewModel.ReceivedLines.Clear();
+        // Закрытие через меню
+        private void Exit_MI_Click(object sender, RoutedEventArgs e) => 
+            Close();
+
+        // Очистка таблицы
+        private void ClearOutput(object sender, RoutedEventArgs e) => 
+            ViewModel.ReceivedLines.Clear();
+
+        // Запись размеров и положения окна во время закрытия для последущего восстановление
+        private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            if (WindowState == WindowState.Maximized)
+            { 
+                // Берём прошлые размеры
+                Properties.Settings.Default.Top       = RestoreBounds.Top;
+                Properties.Settings.Default.Left      = RestoreBounds.Left;
+                Properties.Settings.Default.Height    = RestoreBounds.Height;
+                Properties.Settings.Default.Width     = RestoreBounds.Width;
+                Properties.Settings.Default.Maximized = true;
+            }
+            else
+            {
+                Properties.Settings.Default.Top       = Top;
+                Properties.Settings.Default.Left      = Left;
+                Properties.Settings.Default.Height    = Height;
+                Properties.Settings.Default.Width     = Width;
+                Properties.Settings.Default.Maximized = false;
+            }
+
+            Properties.Settings.Default.Save();
+        }
+
+        // Восстановление размеров и положения окна
+        private void Window_SourceInitialized(object sender, EventArgs e)
+        {
+            if (Height > 0) // Если не по умолчанию
+            {
+                Top    = Properties.Settings.Default.Top;
+                Left   = Properties.Settings.Default.Left;
+                Height = Properties.Settings.Default.Height;
+                Width  = Properties.Settings.Default.Width;
+            }
+
+            if (Properties.Settings.Default.Maximized)
+                WindowState = WindowState.Maximized;
+        }
     }
 }

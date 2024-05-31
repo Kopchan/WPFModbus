@@ -46,8 +46,8 @@ namespace WPFModbus.Views
 
         private void Save(object sender, RoutedEventArgs e)
         {
-            Properties.Settings.Default.PortName     =            Ports_CB.SelectedItem.ToString();
-            Properties.Settings.Default.PortParity   =           Parity_CB.SelectedItem.ToString();
+            Properties.Settings.Default.PortName     = Ports_CB.SelectedItem.ToString();
+            Properties.Settings.Default.PortParity   = ((Models.Parity)Parity_CB.SelectedItem).Code;
             Properties.Settings.Default.PortBaudrate = Convert.ToInt32(Baudrate_CB.Text);
             Properties.Settings.Default.PortTimeout  = Convert.ToInt32(Timeout_CB.Text);
             Properties.Settings.Default.PortDataBits =    (int)DataBits_CB.SelectedItem;

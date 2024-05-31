@@ -17,12 +17,10 @@ namespace WPFModbus.Models
             Code = code;
         }
 
-        public override string ToString()
-        {
-            return Name;
-        }
+        public override string ToString() => Name;
 
-        public readonly static List<Parity> Types = [
+        public readonly static List<Parity> Types = 
+        [
             new Parity("нет"     , "none"),
             new Parity("нечётное", "odd"),
             new Parity("чётное"  , "even"),
