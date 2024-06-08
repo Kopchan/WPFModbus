@@ -154,5 +154,29 @@ namespace WPFModbus.Properties {
                 this["Maximized"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ASCII")]
+        public string SendDataType {
+            get {
+                return ((string)(this["SendDataType"]));
+            }
+            set {
+                this["SendDataType"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string Input {
+            get {
+                return ((string)(this["Input"]));
+            }
+            set {
+                this["Input"] = value;
+            }
+        }
     }
 }

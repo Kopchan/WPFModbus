@@ -13,7 +13,7 @@ namespace WPFModbus.Helpers
             StringBuilder sanitized = new (input.Length);
             foreach (var c in input)
                 sanitized.Append(
-                    char.IsControl(c) || c > 127
+                    char.IsControl(c)
                     ? " . " 
                     : c
                 );

@@ -9,6 +9,11 @@ using System.Text;
 using System.Collections.Specialized;
 using System.Windows.Controls;
 using System.Windows.Shapes;
+using WPFModbus.Enums;
+using WPFModbus.Helpers;
+using System.Text.RegularExpressions;
+using System.Windows.Input;
+using System.Diagnostics;
 
 namespace WPFModbus.Views
 {
@@ -39,6 +44,8 @@ namespace WPFModbus.Views
                 window.ShowDialog();
             }
             Init();
+
+            Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
         }
 
         // Подключение к порту
@@ -87,12 +94,9 @@ namespace WPFModbus.Views
         {
             Task.Run(() =>
             {
-                for (ulong i = 0;;)
+                // Остановка задачи чтения, если порт вдруг закрыт
+                while (ViewModel.PortIsOpen = port.IsOpen)
                 {
-                    // Остановка задачи чтения, если порт вдруг закрыт
-                    ViewModel.PortIsOpen = port.IsOpen;
-                    if (!ViewModel.PortIsOpen) break;
-
                     // Усыпление задачи, если нет байтов для чтения
                     int bytes = port.BytesToRead;
                     if (bytes < 1) 
@@ -100,12 +104,11 @@ namespace WPFModbus.Views
                         Thread.Sleep(100);
                         continue;
                     }
-                    i++;
 
                     // Чтение полученных данных
                     byte[] buffer = new byte[bytes];
                     port.Read(buffer, 0, bytes);
-                    ReceivedLine line = new(i, DateTime.Now, buffer);
+                    ReceivedLine line = new(ViewModel.ReceivedLines.Last()?.Id + 1 ?? 1, DateTime.Now, buffer);
 
                     // Запись данных в таблицу в основном потоке
                     Application.Current.Dispatcher.Invoke(() =>
@@ -133,20 +136,29 @@ namespace WPFModbus.Views
 
             // Установка состояние отправки 
             ViewModel.IsSending = true;
-            var input = Input_TBx.Text;
+
+            // Перевод строки ввода в байты 
+            string input = Input_TBx.Text;
+            byte[] buffer = ViewModel.SendDataType switch
+            {
+                SendDataType.ASCII => Encoding.GetEncoding(1251).GetBytes(input),
+                _ => HexStringToByteArray.Convert(input)
+            };
 
             Task.Run(() =>
             {
+                Debug.WriteLine("Sending...");
                 try
                 {
                     // Отправка
-                    port.WriteLine(input);
+                    port.Write(buffer, 0, buffer.Length);
                 }
                 catch (Exception ex)
                 {
                     // Таймаут или другие ошибки
                     if (ViewModel.IsSending) ViewModel.ErrorMessage = 
-                        "Ошибка при отправке: " + ex switch { 
+                        "Ошибка при отправке: " + ex switch 
+                        { 
                             TimeoutException => "Время ожидания вышло",
                             UnauthorizedAccessException => "Порт недоступен/закрыт",
                             _ => ex.Message 
@@ -167,10 +179,7 @@ namespace WPFModbus.Views
             port.Close();
 
             // Создание окна в центре родителя
-            PortSettingsWindow window = new();
-            window.Owner = this;
-            window.Left = Left + (ActualWidth  - window.Width ) / 2;
-            window.Top  = Top  + (ActualHeight - 300) / 2;
+            PortSettingsWindow window = new() { Owner = this };
 
             // Переинициализация подключение к порту, если настройки изменили (сохранили)
             bool isChanged = window.ShowDialog() ?? true;
@@ -209,15 +218,38 @@ namespace WPFModbus.Views
             ViewModel.ReceivedLines.Clear();
 
         // Очистка ошибки при вводе
-        private void Input_TBx_TextChanged(object sender, TextChangedEventArgs e) =>
-            ViewModel.ErrorMessage = "";
+        private void Input_TBx_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (InputGridRow.ActualHeight > Math.Min(InputSide.Height, Height - 200))
+                InputGridRow.Height = GridLength.Auto;
 
-        // Запись размеров и положения окна во время закрытия для последущего восстановление
+            // FIXME: InputSide.ActualHeight даёт размер, не учитывая содержимое
+            Debug.WriteLine($"{InputGridRow.ActualHeight > Math.Min(InputSide.ActualHeight, Height - 200)} = {InputGridRow.ActualHeight} > min({InputSide.ActualHeight}, {Height - 200})");
+
+            ViewModel.ErrorMessage = "";
+        }
+
+        private void RecalcInputMaxHeight(object sender, SizeChangedEventArgs e)
+        {
+            var maxHeight = InputGridRow.MaxHeight = 
+                Math.Min(InputSide.ActualHeight, Height - 200);
+
+            if (InputGridRow.ActualHeight > maxHeight)
+                InputGridRow.Height = GridLength.Auto;
+        }
+
+        private void CheckMaxSize(object sender, MouseButtonEventArgs e)
+        {
+            if (InputGridRow.ActualHeight == Math.Min(InputSide.ActualHeight, Height - 200))
+                InputGridRow.Height = GridLength.Auto;
+        }
+
+        // Запись размеров и положения окна, поля ввода и режимов во время закрытия для последущего восстановление
         private void Window_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
             if (WindowState == WindowState.Maximized)
             { 
-                // Берём прошлые размеры
+                // Берём прошлые размеры, если окно в полноэкранном режиме
                 Properties.Settings.Default.Top       = RestoreBounds.Top;
                 Properties.Settings.Default.Left      = RestoreBounds.Left;
                 Properties.Settings.Default.Height    = RestoreBounds.Height;
@@ -232,15 +264,18 @@ namespace WPFModbus.Views
                 Properties.Settings.Default.Width     = Width;
                 Properties.Settings.Default.Maximized = false;
             }
+            Properties.Settings.Default.Input = Input_TBx.Text;
+            Properties.Settings.Default.SendDataType = ViewModel.SendDataType.ToString();
 
             Properties.Settings.Default.Save();
         }
 
-        // Восстановление размеров и положения окна
+        // Восстановление размеров и положения окна, поля ввода и режимов
         private void Window_SourceInitialized(object sender, EventArgs e)
         {
-            if (Height > 0) // Если не по умолчанию
+            if (Properties.Settings.Default.Height > 0)
             {
+                // Если размеры в настройках не по умолчанию — восстанавливаем
                 Top    = Properties.Settings.Default.Top;
                 Left   = Properties.Settings.Default.Left;
                 Height = Properties.Settings.Default.Height;
@@ -249,8 +284,17 @@ namespace WPFModbus.Views
 
             if (Properties.Settings.Default.Maximized)
                 WindowState = WindowState.Maximized;
+
+            Input_TBx.Text = Properties.Settings.Default.Input;
+            ViewModel.SendDataType = (SendDataType)Enum.Parse(
+                typeof(SendDataType), 
+                Properties.Settings.Default.SendDataType
+            );
+
+            InputGridRow.MaxHeight = Math.Min(InputSide.ActualHeight, Height - 200);
         }
 
+        // Переключение открытие/закрытие порта
         private void ConnectionSwitch_MI_Click(object sender, RoutedEventArgs e)
         {
             try
@@ -258,10 +302,8 @@ namespace WPFModbus.Views
                 if (port.IsOpen)
                 {
                     port.Close();
-                    //ConnectionSwitch_MI.Header = "_Подключиться";
                     return;
                 }
-                //ConnectionSwitch_MI.Header = "_Отключиться";
                 port.Open();
                 StartRead();
             }
@@ -274,6 +316,19 @@ namespace WPFModbus.Views
                     MessageBoxImage.Warning
                 );
             }
+        }
+
+        // Перевод (HEX <-> ASCII) уже ввёдных данных по нажатию на радио-кнопку
+        private void SendDataType_RB_Click(object sender, RoutedEventArgs e)
+        {
+            if (sender is not RadioButton rb) return;
+
+            Input_TBx.Text = rb.Content switch
+            {
+                // FIXME: Encoding.GetEncoding(1251) может что-то сломать?
+                "ASCII" => Encoding.GetEncoding(1251).GetString( HexStringToByteArray.Convert(Input_TBx.Text) ),
+                _ => BitConverter.ToString( Encoding.GetEncoding(1251).GetBytes(Input_TBx.Text) ).Replace('-', ' ')
+            };
         }
     }
 }

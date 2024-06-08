@@ -14,7 +14,7 @@ namespace WPFModbus.Models
         public string   TimeString => DateTime.ToString("HH:mm:ss.fff");
         public byte[]   Data       { get; set; }
         public string   DataString => BitConverter.ToString(Data).Replace('-', ' ');
-        public string   Text => SanitizeString.Sanitize(Data);
+        public string   Text => SanitizeString.Sanitize(Encoding.GetEncoding(1251).GetString(Data));
         
         public ReceivedLine(ulong id, DateTime dateTime, byte[] data) 
         {

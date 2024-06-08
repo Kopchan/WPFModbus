@@ -8,7 +8,9 @@
         mc:Ignorable="d"
         Title="COM порт" 
         Width="230" 
-        SizeToContent="Height" ResizeMode="NoResize">
+        SizeToContent="Height" 
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner">
     <Window.Resources>
         <Style TargetType="DockPanel">
             <Setter Property="LastChildFill" Value="True"/>
