@@ -8,24 +8,24 @@ namespace WPFModbus.Helpers
 {
     public class SanitizeString
     {
-        public static string Sanitize(string input)
+        public static string ReplaceControl(string input, string replacment = " . ")
         {
-            StringBuilder sanitized = new (input.Length);
+            StringBuilder sanitized = new(input.Length);
             foreach (var c in input)
                 sanitized.Append(
                     char.IsControl(c)
-                    ? " . " 
+                    ? replacment
                     : c
                 );
             return sanitized.ToString();
         }
-        public static string Sanitize(byte[] data)
+        public static string ReplaceControl(byte[] data, string replacment = " . ")
         {
             StringBuilder sanitized = new(data.Length);
             foreach (var c in data)
                 sanitized.Append(
                     char.IsControl((char)c) || c > 127
-                    ? " . " 
+                    ? replacment
                     : (char)c
                 );
             return sanitized.ToString();

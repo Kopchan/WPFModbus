@@ -4,6 +4,7 @@
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         xmlns:local="clr-namespace:WPFModbus.Views"
+        xmlns:sys="clr-namespace:System;assembly=mscorlib"
         xmlns:helpers="clr-namespace:WPFModbus.Helpers"
         mc:Ignorable="d"
         Title="WPFModbus" 
@@ -37,22 +38,42 @@
                     </MenuItem.Style>
                 </MenuItem>
             </MenuItem>
-            <MenuItem Header="Вид">
-                <MenuItem Header="Авто">
+            <MenuItem Header="_Вид">
+                <MenuItem Header="_Авто">
                     <MenuItem.Icon>
                         <RadioButton GroupName="View" HorizontalAlignment="Center"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Компактное">
+                <MenuItem Header="_Компактное">
                     <MenuItem.Icon>
                         <RadioButton GroupName="View" HorizontalAlignment="Center"/>
                     </MenuItem.Icon>
                 </MenuItem>
-                <MenuItem Header="Две колонки">
+                <MenuItem Header="_Две колонки">
                     <MenuItem.Icon>
                         <RadioButton GroupName="View" HorizontalAlignment="Center"/>
                     </MenuItem.Icon>
                 </MenuItem>
+            </MenuItem>
+            <!--<MenuItem Header="Кодировка" ItemsSource="{Binding EncodingsGroups}">-->
+            <MenuItem Header="_Кодировка" x:Name="Encodings_MI">
+                <MenuItem Header="ASCII" Click="Encoding_MI_Click">
+                    <MenuItem.Tag>
+                        <sys:Int32>20127</sys:Int32>
+                    </MenuItem.Tag>
+                </MenuItem>
+
+                <!--<MenuItem.ItemTemplate>
+                    <DataTemplate>
+                        <MenuItem Header="{Binding Name}" ItemsSource="{Binding Encodings}">
+                            <MenuItem.ItemTemplate>
+                                <DataTemplate>
+                                    <MenuItem Header="{Binding Name}" Tag="{Binding CodePage}" Click="Encoding_MI_Click"/>
+                                </DataTemplate>
+                            </MenuItem.ItemTemplate>
+                        </MenuItem>
+                    </DataTemplate>
+                </MenuItem.ItemTemplate>-->
             </MenuItem>
         </Menu>
         <StatusBar DockPanel.Dock="Bottom" Background="Transparent" Margin="5 0">
@@ -78,58 +99,168 @@
             <Separator Background="LightGray"/>
             <StatusBarItem Content="{Binding Port.DataBits}"/>
             <Separator Background="LightGray"/>
-            <StatusBarItem Content="{Binding Port.Parity}"/>
+            <StatusBarItem>
+                <StatusBarItem.Style>
+                    <Style TargetType="StatusBarItem">
+                        <Setter Property="Content" Value="нет"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Port.Parity}" Value="Odd">
+                                <Setter Property="Content" Value="нечётное"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Port.Parity}" Value="Even">
+                                <Setter Property="Content" Value="чётное"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Port.Parity}" Value="Mark">
+                                <Setter Property="Content" Value="марк"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Port.Parity}" Value="Space">
+                                <Setter Property="Content" Value="пропуск"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StatusBarItem.Style>
+            </StatusBarItem>
             <Separator Background="LightGray"/>
-            <StatusBarItem Content="{Binding Port.StopBits}"/>
+            <StatusBarItem>
+                <StatusBarItem.Style>
+                    <Style TargetType="StatusBarItem">
+                        <Setter Property="Content" Value="стоп 1"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Port.StopBits}" Value="OnePointFive">
+                                <Setter Property="Content" Value="стоп 1,5"/>
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Port.StopBits}" Value="Two">
+                                <Setter Property="Content" Value="стоп 2"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StatusBarItem.Style>
+            </StatusBarItem>
             <!-- TODO: Локализировать статус-бар -->
         </StatusBar>
         <Grid>
             <Grid.RowDefinitions>
-                <RowDefinition MinHeight="70" Height="Auto" x:Name="InputGridRow"/>
+                <RowDefinition MinHeight="100" Height="Auto" x:Name="InputGridRow"/>
                 <RowDefinition Height="Auto"/>
-                <RowDefinition MinHeight="80" Height="*"/>
+                <RowDefinition MinHeight="100" Height="*"/>
             </Grid.RowDefinitions>
 
-            <ScrollViewer VerticalScrollBarVisibility="Auto">
-                <StackPanel Grid.Row="0" x:Name="InputSide" SizeChanged="RecalcInputMaxHeight" Margin="5 0">
-                    <DockPanel DockPanel.Dock="Top">
-                        <RadioButton DockPanel.Dock="Right" Margin="0 0  5 0" VerticalAlignment="Center" GroupName="SendDataType" Content="HEX"
-                                     IsChecked="{Binding SendDataType, Converter={StaticResource EnumToBoolConv}, ConverterParameter=HEX}"
-                                     Click="SendDataType_RB_Click"/>
-                        <RadioButton DockPanel.Dock="Right" Margin="0 0 10 0" VerticalAlignment="Center" GroupName="SendDataType" Content="ASCII"
-                                     IsChecked="{Binding SendDataType, Converter={StaticResource EnumToBoolConv}, ConverterParameter=ASCII}"
-                                     Click="SendDataType_RB_Click"/>
-                        <Label VerticalAlignment="Center">Ввод:</Label>
-                    </DockPanel>
-                    <StackPanel>
+            <ScrollViewer Grid.Row="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel>
+                    <StackPanel x:Name="InputSide" SizeChanged="RecalcInputMaxHeight" Margin="5 0">
                         <DockPanel DockPanel.Dock="Top">
-                            <Button DockPanel.Dock="Right" Width="30" Height="30" Margin="5 0 0 0" IsDefault="True"
-                                x:Name="Send_BT" Click="SendMessage" FontSize="14" VerticalAlignment="Top">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Content">
-                                            <Setter.Value>
-                                                <Path Data="M 0,0 L 10,5 L 0,10 Z" Fill="Black"/>
-                                            </Setter.Value>
-                                        </Setter>
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsSending}" Value="True">
-                                                <Setter Property="Content">
-                                                    <Setter.Value>
-                                                        <Rectangle Width="10" Height="10" Fill="Black"/>
-                                                    </Setter.Value>
-                                                </Setter>
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                            <TextBox x:Name="Input_TBx" FontSize="16" MinHeight="30" VerticalContentAlignment="Center" 
-                                     TextChanged="Input_TBx_TextChanged" TextWrapping="Wrap" AcceptsReturn="True" Padding="2 0"/>
+                            <Label VerticalAlignment="Center">Ввод:</Label>
                         </DockPanel>
-                        <TextBox Background="Transparent" BorderThickness="0" Text="{Binding ErrorMessage, Mode=OneWay}"
-                             IsReadOnly="True" DockPanel.Dock="Top" FontSize="10" TextAlignment="Center" 
-                             Foreground="Red" TextWrapping="Wrap" Width="Auto"/>
+                        <StackPanel>
+                            <DockPanel DockPanel.Dock="Top">
+                                <TextBox x:Name="Input_TBx" FontSize="16" MinHeight="30" VerticalContentAlignment="Center" 
+                                            TextChanged="Input_TBx_TextChanged" TextWrapping="Wrap" AcceptsReturn="True" Padding="2 0"/>
+                            </DockPanel>
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition/>
+                                    <ColumnDefinition Width="80"/>
+                                </Grid.ColumnDefinitions>
+                                <WrapPanel>
+                                    <GroupBox Header="Режим" Margin="0 0 5 0">
+                                        <StackPanel MinWidth="80">
+                                            <RadioButton Margin="5" GroupName="SendMode" Content="RAW" Click="SendMode_RB_Click"
+                                            IsChecked="{Binding SendMode, Converter={StaticResource EnumToBoolConv}, ConverterParameter=RAW}" Tag="RAW"/>
+                                            <RadioButton Margin="5" GroupName="SendMode" Content="Modbus" Click="SendMode_RB_Click"
+                                            IsChecked="{Binding SendMode, Converter={StaticResource EnumToBoolConv}, ConverterParameter=Modbus}" Tag="Modbus"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Header="Тип данных">
+                                        <GroupBox.Style>
+                                            <Style TargetType="GroupBox">
+                                                <Setter Property="Margin" Value="0 0 5 0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SendMode}" Value="Modbus">
+                                                        <Setter Property="Width" Value="0"/>
+                                                        <Setter Property="Margin" Value="0"/>
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </GroupBox.Style>
+                                        <StackPanel MinWidth="80">
+                                            <RadioButton Margin="5" GroupName="SendDataType" Content="HEX"
+                                            IsChecked="{Binding SendDataType, Converter={StaticResource EnumToBoolConv}, ConverterParameter=HEX}" Tag="HEX"
+                                            Click="SendDataType_RB_Click"/>
+                                            <RadioButton Margin="5" GroupName="SendDataType" Content="{Binding SelectedEncodingName}"
+                                            IsChecked="{Binding SendDataType, Converter={StaticResource EnumToBoolConv}, ConverterParameter=Text}" Tag="Text"
+                                            Click="SendDataType_RB_Click"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Header="Протокол">
+                                        <GroupBox.Style>
+                                            <Style TargetType="GroupBox">
+                                                <Setter Property="Margin" Value="0 0 5 0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SendMode}" Value="RAW">
+                                                        <Setter Property="Width" Value="0"/>
+                                                        <Setter Property="Margin" Value="0"/>
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </GroupBox.Style>
+                                        <StackPanel MinWidth="80">
+                                            <RadioButton Margin="5" GroupName="SendMBProtocol" Content="RTU"
+                                            IsChecked="{Binding SendMBProtocol, Converter={StaticResource EnumToBoolConv}, ConverterParameter=RTU}" Tag="RTU"/>
+                                            <RadioButton Margin="5" GroupName="SendMBProtocol" Content="ASCII"
+                                            IsChecked="{Binding SendMBProtocol, Converter={StaticResource EnumToBoolConv}, ConverterParameter=ASCII}" Tag="ASCII"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Header="Функция">
+                                        <GroupBox.Style>
+                                            <Style TargetType="GroupBox">
+                                                <Setter Property="Margin" Value="0 0 5 0"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding SendMode}" Value="RAW">
+                                                        <Setter Property="Width" Value="0"/>
+                                                        <Setter Property="Margin" Value="0"/>
+                                                        <Setter Property="Visibility" Value="Hidden"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </GroupBox.Style>
+                                        <StackPanel MinWidth="120">
+                                            <ComboBox Margin="5"/>
+                                        </StackPanel>
+                                    </GroupBox>
+                                    <GroupBox Header="Интервал">
+                                        <StackPanel MinWidth="80">
+                                            <CheckBox Margin="5" Content="Включить" IsChecked="{Binding SendIsInterval}"/>
+                                            <DockPanel Margin="5 2 5 5">
+                                                <TextBlock DockPanel.Dock="Right" Margin="5 0 0 0">мс</TextBlock>
+                                                <TextBox Text="{Binding SendInterval}"/>
+                                            </DockPanel>
+                                        </StackPanel>
+                                    </GroupBox>
+                                </WrapPanel>
+                                <StackPanel Grid.Column="1">
+                                    <Button IsDefault="True" Margin="0 5" Click="StartSend" FontSize="14">
+                                        <Button.Style>
+                                            <Style TargetType="Button">
+                                                <Setter Property="Content" Value="Отправить"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsSending}" Value="True">
+                                                        <Setter Property="Content" Value="Отмена"/>
+                                                    </DataTrigger>
+                                                    <DataTrigger Binding="{Binding IsSendingInterval}" Value="True">
+                                                        <Setter Property="Content" Value="Отмена"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Button.Style>
+                                    </Button>
+                                </StackPanel>
+                            </Grid>
+                            <TextBox Background="Transparent" BorderThickness="0" Text="{Binding ErrorMessage, Mode=OneWay}"
+                                        IsReadOnly="True" DockPanel.Dock="Top" FontSize="10" TextAlignment="Center" 
+                                        Foreground="Red" TextWrapping="Wrap" Width="Auto"/>
+                        </StackPanel>
                     </StackPanel>
                 </StackPanel>
             </ScrollViewer>
@@ -151,10 +282,10 @@
                               IsReadOnly="True" AutoGenerateColumns="False" HorizontalGridLinesBrush="Gray" VerticalGridLinesBrush="Transparent"
                               CanUserResizeRows="False" HeadersVisibility="Column" BorderBrush="#abadb3">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="#"      Width="40" Binding="{Binding Id}" CanUserSort="False"/>
+                        <DataGridTextColumn Header="#"      Width="40" Binding="{Binding   IdString}"/>
                         <DataGridTextColumn Header="Время"  Width="80" Binding="{Binding TimeString}"/>
                         <DataGridTextColumn Header="Данные" Width="2*" Binding="{Binding DataString}"/>
-                        <DataGridTextColumn Header="ASCII"  Width="1*" Binding="{Binding Text}"/>
+                        <DataGridTextColumn Header="Текст"  Width="1*" Binding="{Binding Text}"/>
                     </DataGrid.Columns>
                 </DataGrid>
             </DockPanel>

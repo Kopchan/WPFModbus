@@ -36,10 +36,28 @@
       <Value Profile="(Default)">False</Value>
     </Setting>
     <Setting Name="SendDataType" Type="System.String" Scope="User">
-      <Value Profile="(Default)">ASCII</Value>
+      <Value Profile="(Default)">Text</Value>
     </Setting>
     <Setting Name="Input" Type="System.String" Scope="User">
       <Value Profile="(Default)" />
+    </Setting>
+    <Setting Name="EncodingCodePage" Type="System.Int32" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="SendMode" Type="System.String" Scope="User">
+      <Value Profile="(Default)">RAW</Value>
+    </Setting>
+    <Setting Name="SendIsInterval" Type="System.Boolean" Scope="User">
+      <Value Profile="(Default)">False</Value>
+    </Setting>
+    <Setting Name="SendInterval" Type="System.UInt64" Scope="User">
+      <Value Profile="(Default)">1000</Value>
+    </Setting>
+    <Setting Name="SendMBProtocol" Type="System.String" Scope="User">
+      <Value Profile="(Default)">RTU</Value>
+    </Setting>
+    <Setting Name="SendMBFunc" Type="System.String" Scope="User">
+      <Value Profile="(Default)">ReadCoilStatus</Value>
     </Setting>
   </Settings>
 </SettingsFile>

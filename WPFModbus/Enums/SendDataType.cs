@@ -3,6 +3,6 @@
     public enum SendDataType
     {
         HEX,
-        ASCII,
+        Text,
     }
 }

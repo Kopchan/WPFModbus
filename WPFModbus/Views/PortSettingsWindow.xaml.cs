@@ -29,14 +29,12 @@ namespace WPFModbus.Views
             InitializeComponent();
             GetPorts();
 
-             Timeout_CB.Text          = Properties.Settings.Default.PortTimeout.ToString();
+             Timeout_CB.Text          = Properties.Settings.Default.PortTimeout .ToString();
             Baudrate_CB.Text          = Properties.Settings.Default.PortBaudrate.ToString();
             DataBits_CB.SelectedItem  = Properties.Settings.Default.PortDataBits;
             StopBits_CB.SelectedItem  = Properties.Settings.Default.PortStopBits;
               Parity_CB.SelectedItem  = Properties.Settings.Default.PortParity;
               Parity_CB.ItemsSource   = Models.Parity.Types;
-
-                
 
             if (Properties.Settings.Default.PortName == "")
                 Ports_CB.SelectedIndex = 0;
@@ -44,15 +42,23 @@ namespace WPFModbus.Views
 
         private void Save(object sender, RoutedEventArgs e)
         {
-            Properties.Settings.Default.PortName     = Ports_CB.SelectedItem?.ToString() ?? Ports_CB.Items[0]?.ToString() ?? "";
-            Properties.Settings.Default.PortParity   = ((Models.Parity)Parity_CB.SelectedItem).Code;
-            Properties.Settings.Default.PortBaudrate = Convert.ToInt32(Baudrate_CB.Text);
-            Properties.Settings.Default.PortTimeout  = Convert.ToInt32(Timeout_CB.Text);
-            Properties.Settings.Default.PortDataBits =    (int)DataBits_CB.SelectedItem;
-            Properties.Settings.Default.PortStopBits = (double)StopBits_CB.SelectedItem;
-            Properties.Settings.Default.Save();
-            DialogResult = true;
-            Close();
+            try
+            {
+
+                Properties.Settings.Default.PortName = Ports_CB.SelectedItem?.ToString() ?? Ports_CB.Items[0]?.ToString() ?? "";
+                Properties.Settings.Default.PortParity = ((Models.Parity)Parity_CB.SelectedItem).Code;
+                Properties.Settings.Default.PortBaudrate = Int32.TryParse(Baudrate_CB.Text, out int baudrate) ? baudrate : throw new Exception("Введите число в качестве скорости");
+                Properties.Settings.Default.PortTimeout = Int32.TryParse(Timeout_CB.Text, out int timeout) ? timeout : throw new Exception("Введите число в качестве таймаута");
+                Properties.Settings.Default.PortDataBits = (int)DataBits_CB.SelectedItem;
+                Properties.Settings.Default.PortStopBits = (double)StopBits_CB.SelectedItem;
+                Properties.Settings.Default.Save();
+                DialogResult = true;
+                Close();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message, "Ошибка");
+            }
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
@@ -86,10 +92,6 @@ namespace WPFModbus.Views
                     catch (Exception) { }
 
                     port.Close();
-
-                    //Application.Current.Dispatcher.Invoke(() =>
-                    //    Ports.Add(new Port(portName, isAvaliable))
-                    //);
 
                     Application.Current.Dispatcher.Invoke(() =>
                     {

@@ -157,7 +157,7 @@ namespace WPFModbus.Properties {
         
         [global::System.Configuration.UserScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("ASCII")]
+        [global::System.Configuration.DefaultSettingValueAttribute("Text")]
         public string SendDataType {
             get {
                 return ((string)(this["SendDataType"]));
@@ -176,6 +176,78 @@ namespace WPFModbus.Properties {
             }
             set {
                 this["Input"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public int EncodingCodePage {
+            get {
+                return ((int)(this["EncodingCodePage"]));
+            }
+            set {
+                this["EncodingCodePage"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("RAW")]
+        public string SendMode {
+            get {
+                return ((string)(this["SendMode"]));
+            }
+            set {
+                this["SendMode"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool SendIsInterval {
+            get {
+                return ((bool)(this["SendIsInterval"]));
+            }
+            set {
+                this["SendIsInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("1000")]
+        public ulong SendInterval {
+            get {
+                return ((ulong)(this["SendInterval"]));
+            }
+            set {
+                this["SendInterval"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("RTU")]
+        public string SendMBProtocol {
+            get {
+                return ((string)(this["SendMBProtocol"]));
+            }
+            set {
+                this["SendMBProtocol"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ReadCoilStatus")]
+        public string SendMBFunc {
+            get {
+                return ((string)(this["SendMBFunc"]));
+            }
+            set {
+                this["SendMBFunc"] = value;
             }
         }
     }
