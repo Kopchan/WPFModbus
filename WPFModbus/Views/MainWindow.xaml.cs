@@ -106,8 +106,7 @@ namespace WPFModbus.Views
             Encoding.RegisterProvider(CodePagesEncodingProvider.Instance);
 
             foreach (var enc in Encoding.GetEncodings())
-                //if (enc.GetEncoding().IsSingleByte && enc.CodePage != 20127)
-                    ViewModel.Encodings.Add(enc);
+                ViewModel.Encodings.Add(enc);
 
             var groupedEncodings = ViewModel.Encodings
                 .Select(info => new { EncodingInfo = info, GroupName = GetGroupName(info.DisplayName) })

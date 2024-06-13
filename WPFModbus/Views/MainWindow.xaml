@@ -157,6 +157,50 @@
                 <StackPanel>
                     <StackPanel x:Name="InputSide" SizeChanged="RecalcInputMaxHeight" Margin="5 0">
                         <DockPanel DockPanel.Dock="Top">
+                            <TextBlock VerticalAlignment="Center" DockPanel.Dock="Right" Foreground="Gray">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Style.Triggers>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SendMode}" Value="RAW"/>
+                                                    <Condition Binding="{Binding SendDataType}" Value="HEX"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.Setters>
+                                                    <Setter Property="Text" Value="Пример: FF 0F 8F..."/>
+                                                </MultiDataTrigger.Setters>
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SendMode}" Value="RAW"/>
+                                                    <Condition Binding="{Binding SendDataType}" Value="Text"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.Setters>
+                                                    <Setter Property="Text" Value="Пример: My test input..."/>
+                                                </MultiDataTrigger.Setters>
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SendMode}" Value="Modbus"/>
+                                                    <Condition Binding="{Binding SendMBFunc}" Value="WriteCoils"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.Setters>
+                                                    <Setter Property="Text" Value="Пример: 11010110111011..."/>
+                                                </MultiDataTrigger.Setters>
+                                            </MultiDataTrigger>
+                                            <MultiDataTrigger>
+                                                <MultiDataTrigger.Conditions>
+                                                    <Condition Binding="{Binding SendMode}" Value="Modbus"/>
+                                                    <Condition Binding="{Binding SendMBFunc}" Value="WriteRegisters"/>
+                                                </MultiDataTrigger.Conditions>
+                                                <MultiDataTrigger.Setters>
+                                                    <Setter Property="Text" Value="Пример: FFFF 000F 88FF..."/>
+                                                </MultiDataTrigger.Setters>
+                                            </MultiDataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
                             <Label VerticalAlignment="Center">Ввод:</Label>
                         </DockPanel>
                         <StackPanel>
