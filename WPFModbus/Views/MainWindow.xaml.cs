@@ -336,7 +336,9 @@ namespace WPFModbus.Views
                     }
 
                     string output = "";
-                    if (bools.Length > 0) output = String.Join("", bools);
+                    if (bools.Length > 0) 
+                        foreach (var num in bools)
+                            output += Convert.ToUInt16(num);
                     else
                         foreach(var num in ushorts)
                             output += num.ToString("X4") + " ";
@@ -363,7 +365,7 @@ namespace WPFModbus.Views
                 if (ViewModel.IsSending) ViewModel.ErrorMessage =
                     "Ошибка при отправке: " + ex switch
                     {
-                        TimeoutException => "Время ожидания вышло. Возможно данного слейва не существует",
+                        TimeoutException => "Время ожидания вышло. Возможно данного слейва не существует или не подходящий протокол",
                         UnauthorizedAccessException => "Порт недоступен/закрыт",
                         FileNotFoundException => "Порт не найден",
                         SlaveException => "Вы уверены что этот адрес и этот слейв принимает данную функцию?",
