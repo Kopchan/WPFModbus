@@ -59,5 +59,14 @@
     <Setting Name="SendMBFunc" Type="System.String" Scope="User">
       <Value Profile="(Default)">ReadCoilStatus</Value>
     </Setting>
+    <Setting Name="SlaveId" Type="System.Byte" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="StartAddress" Type="System.UInt16" Scope="User">
+      <Value Profile="(Default)">0</Value>
+    </Setting>
+    <Setting Name="Quantity" Type="System.UInt16" Scope="User">
+      <Value Profile="(Default)">8</Value>
+    </Setting>
   </Settings>
 </SettingsFile>

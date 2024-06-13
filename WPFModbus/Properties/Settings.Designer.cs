@@ -250,5 +250,41 @@ namespace WPFModbus.Properties {
                 this["SendMBFunc"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public byte SlaveId {
+            get {
+                return ((byte)(this["SlaveId"]));
+            }
+            set {
+                this["SlaveId"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("0")]
+        public ushort StartAddress {
+            get {
+                return ((ushort)(this["StartAddress"]));
+            }
+            set {
+                this["StartAddress"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("8")]
+        public ushort Quantity {
+            get {
+                return ((ushort)(this["Quantity"]));
+            }
+            set {
+                this["Quantity"] = value;
+            }
+        }
     }
 }

@@ -2,6 +2,11 @@
 {
     public enum SendMBFunc
     {
-        ReadCoilStatus,
+        ReadCoils,
+        ReadInputs,
+        ReadHoldingRegisters,
+        ReadInputRegisters,
+        WriteCoils,
+        WriteRegisters,
     }
 }

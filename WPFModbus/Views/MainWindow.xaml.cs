@@ -16,6 +16,10 @@ using System.Windows.Input;
 using System.Diagnostics;
 using System.IO;
 using System.Collections.ObjectModel;
+using NModbus.Device;
+using System.Diagnostics.Metrics;
+using NModbus;
+using NModbus.Serial;
 
 namespace WPFModbus.Views
 {
@@ -27,6 +31,7 @@ namespace WPFModbus.Views
         private SerialPort port;
         private System.Timers.Timer sendTimer = new();
         private byte[] sendBuffer = [];
+        private string input = "";
 
         private MainWindowViewModel ViewModel { get; } = new();
 
@@ -65,19 +70,20 @@ namespace WPFModbus.Views
                     DataBits = Properties.Settings.Default.PortDataBits,
                     StopBits = Properties.Settings.Default.PortStopBits switch
                     {
-                        2 => StopBits.Two,
+                        2   => StopBits.Two,
                         1.5 => StopBits.OnePointFive,
-                        _ => StopBits.One,
+                        _   => StopBits.One,
                     },
                     Parity = Properties.Settings.Default.PortParity switch
                     {
-                        "odd" => System.IO.Ports.Parity.Odd,
-                        "even" => System.IO.Ports.Parity.Even,
-                        "mark" => System.IO.Ports.Parity.Mark,
+                        "odd"   => System.IO.Ports.Parity.Odd,
+                        "even"  => System.IO.Ports.Parity.Even,
+                        "mark"  => System.IO.Ports.Parity.Mark,
                         "space" => System.IO.Ports.Parity.Space,
-                        _ => System.IO.Ports.Parity.None,
+                        _       => System.IO.Ports.Parity.None,
                     },
                     WriteTimeout = Properties.Settings.Default.PortTimeout,
+                    ReadTimeout  = Properties.Settings.Default.PortTimeout,
                 };
                 ViewModel.Port = port;
                 port.Open();
@@ -140,9 +146,10 @@ namespace WPFModbus.Views
             Task.Run(() =>
             {
                 // Остановка задачи чтения, если порт вдруг закрыт
-                for (ulong i = ViewModel.ReceivedLines.LastOrDefault()?.Id + 1 ?? 1; 
-                     ViewModel.PortIsOpen = port.IsOpen;)
+                while (ViewModel.PortIsOpen = port.IsOpen)
                 {
+                    if (ViewModel.SendMode == SendMode.Modbus) break;
+
                     // Усыпление задачи, если нет байтов для чтения
                     int bytes = port.BytesToRead;
                     if (bytes < 1) 
@@ -150,12 +157,17 @@ namespace WPFModbus.Views
                         Thread.Sleep(100);
                         continue;
                     }
-                    i++;
 
                     // Чтение полученных данных
                     byte[] buffer = new byte[bytes];
                     port.Read(buffer, 0, bytes);
-                    ReceivedLine line = new(i, DateTime.Now, buffer, ViewModel.SelectedEncoding);
+                    ReceivedLine line = new()
+                    {
+                        Id   = (Convert.ToUInt64(ViewModel.ReceivedLines?.LastOrDefault()?.Id ?? "0") + 1).ToString("D5"),
+                        Time = DateTime.Now.ToString("HH:mm:ss.fff"),
+                        Data = BitConverter.ToString(buffer).Replace('-', ' '),
+                        Text = SanitizeString.ReplaceControl(ViewModel.SelectedEncoding.GetString(buffer))
+                    };
 
                     // Запись данных в таблицу в основном потоке
                     Application.Current.Dispatcher.Invoke(() =>
@@ -168,10 +180,12 @@ namespace WPFModbus.Views
         }
 
         // Обработка исходящих данных
-        private void StartSend(object sender, RoutedEventArgs e)
+        private void StartStopSend(object sender, RoutedEventArgs e)
         {
             // Очистка ошибки
             ViewModel.ErrorMessage = "";
+
+            input = Input_TBx.Text;
 
             // Отмена отправки, если она происходила
             if (ViewModel.IsSending || ViewModel.IsSendingInterval)
@@ -182,27 +196,48 @@ namespace WPFModbus.Views
                 return;
             }
 
-            // Перевод строки ввода в байты 
-            string input = Input_TBx.Text;
-            sendBuffer = ViewModel.SendDataType switch
+            if (ViewModel.SendMode == SendMode.RAW)
             {
-                SendDataType.Text => Encoding.GetEncoding(ViewModel.SelectedEncoding?.CodePage ?? 20127).GetBytes(input),
-                _ => HexStringToByteArray.Convert(input)
-            };
+                // Перевод строки ввода в байты 
+                sendBuffer = ViewModel.SendDataType switch
+                {
+                    SendDataType.Text => Encoding.GetEncoding(ViewModel.SelectedEncoding?.CodePage ?? 20127).GetBytes(input),
+                    _ => HexStringToByteArray.Convert(input)
+                };
 
-            SendOneMessage();
+                SendRAW();
 
-            if (ViewModel.SendIsInterval)
+                if (ViewModel.SendIsInterval)
+                {
+                    ViewModel.IsSendingInterval = true;
+                    sendTimer.Interval = ViewModel.SendInterval;
+                    sendTimer.Enabled = true;
+                }
+                return;
+            }
+            else
             {
-                ViewModel.IsSendingInterval = true;
-                sendTimer.Interval = ViewModel.SendInterval;
-                sendTimer.Enabled = true;
+                SendModbus();
+
+                if (ViewModel.SendIsInterval)
+                {
+                    ViewModel.IsSendingInterval = true;
+                    sendTimer.Interval = ViewModel.SendInterval;
+                    sendTimer.Enabled = true;
+                }
+                return;
             }
         }
 
-        private void OnSendTimerEvent(object? source, System.Timers.ElapsedEventArgs e) => SendOneMessage();
+        private void OnSendTimerEvent(object? source, System.Timers.ElapsedEventArgs e) 
+        {
+            if (ViewModel.SendMode == SendMode.RAW) 
+                SendRAW();
+            else 
+                SendModbus();
+        }
 
-        private void SendOneMessage()
+        private void SendRAW()
         {
             Task.Run(() =>
             {
@@ -219,6 +254,106 @@ namespace WPFModbus.Views
 
                     // Отправка
                     port.Write(sendBuffer, 0, sendBuffer.Length);
+
+                    // Очистка ошибки
+                    ViewModel.ErrorMessage = "";
+                }
+                catch (Exception ex)
+                {
+                    // Таймаут или другие ошибки
+                    if (ViewModel.IsSending) ViewModel.ErrorMessage =
+                        "Ошибка при отправке: " + ex switch
+                        {
+                            TimeoutException => "Время ожидания вышло",
+                            UnauthorizedAccessException => "Порт недоступен/закрыт",
+                            FileNotFoundException => "Порт не найден",
+                            _ => ex.Message
+                        };
+                }
+                finally
+                {
+                    // Переключение статуса
+                    ViewModel.IsSending = false;
+                }
+            });
+        }
+
+        private void SendModbus()
+        {
+            Task.Run(() =>
+            {
+                try
+                {
+                    // Установка состояние отправки 
+                    ViewModel.IsSending = true;
+
+                    if (!port.IsOpen)
+                    {
+                        port.Open();
+                        StartRead();
+                    }
+
+                    SerialPortAdapter adapter = new(port);
+                    ModbusFactory factory = new();
+                    IModbusMaster master = ViewModel.SendMBProtocol switch
+                    {
+                        SendMBProtocol.RTU => factory.CreateRtuMaster  (adapter),
+                        _                  => factory.CreateAsciiMaster(adapter),
+                    };
+
+            
+                    bool  [] bools   = [];
+                    ushort[] ushorts = [];
+
+                    bool  [] inputBools = [];
+                    ushort[] inputUshorts = [];
+
+                    if (ViewModel.SendMBFunc == SendMBFunc.WriteCoils)
+                        for (var i = 0; i < input.Length; i++)
+                            inputBools[i] = Convert.ToBoolean(Convert.ToString(input[i]));
+
+                    if (ViewModel.SendMBFunc == SendMBFunc.WriteRegisters) 
+                    {
+                        input = Regex.Replace(
+                            input.Replace("0x", ""),
+                            "[^0-9A-Fa-f]",
+                            ""
+                        );
+                        while (input.Length % 4 != 0) input = input.Insert(0, "0");
+                        inputUshorts = Enumerable.Range(0, input.Length)
+                             .Where(x => x % 4 == 0)
+                             .Select(x => System.Convert.ToUInt16(input.Substring(x, 4), 16))
+                             .ToArray();
+                    }
+
+                    switch (ViewModel.SendMBFunc)
+                    {
+                        case SendMBFunc.ReadCoils           : bools   = master.ReadCoils             (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
+                        case SendMBFunc.ReadInputs          : bools   = master.ReadInputs            (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
+                        case SendMBFunc.ReadHoldingRegisters: ushorts = master.ReadHoldingRegisters  (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
+                        case SendMBFunc.ReadInputRegisters  : ushorts = master.ReadInputRegisters    (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
+                        case SendMBFunc.WriteCoils          :           master.WriteMultipleCoils    (ViewModel.SlaveId, ViewModel.StartAddress, inputBools        ); break;
+                        case SendMBFunc.WriteRegisters      :           master.WriteMultipleRegisters(ViewModel.SlaveId, ViewModel.StartAddress, inputUshorts      ); break;
+                    }
+
+                    string output = "";
+                    if (bools.Length > 0) output = String.Join("", bools);
+                    else
+                        foreach(var num in ushorts)
+                            output += num.ToString("X4") + " ";
+
+
+                    ReceivedLine line = new()
+                    {
+                        Id   = (Convert.ToUInt64(ViewModel.ReceivedLines?.LastOrDefault()?.Id ?? "0") + 1).ToString("D5"),
+                        Time = DateTime.Now.ToString("HH:mm:ss.fff"),
+                        Data = output,
+                    };
+                    Application.Current.Dispatcher.Invoke(() =>
+                    {
+                        ViewModel.ReceivedLines.Add(line);
+                        if (ViewModel.InBottomDG) Output_DG.ScrollIntoView(line);
+                    });
 
                     // Очистка ошибки
                     ViewModel.ErrorMessage = "";
@@ -346,6 +481,9 @@ namespace WPFModbus.Views
             Properties.Settings.Default.SendMBFunc     = ViewModel.SendMBFunc    .ToString();
             Properties.Settings.Default.SendIsInterval = ViewModel.SendIsInterval;
             Properties.Settings.Default.SendInterval   = ViewModel.SendInterval;
+            Properties.Settings.Default.SlaveId        = ViewModel.SlaveId;
+            Properties.Settings.Default.StartAddress   = ViewModel.StartAddress;
+            Properties.Settings.Default.Quantity       = ViewModel.Quantity;
 
             Properties.Settings.Default.EncodingCodePage = ViewModel.SelectedEncoding?.CodePage ?? 0;
 
@@ -388,7 +526,10 @@ namespace WPFModbus.Views
                 );
 
                 ViewModel.SendIsInterval = Properties.Settings.Default.SendIsInterval;
-                ViewModel.SendInterval = Properties.Settings.Default.SendInterval;
+                ViewModel.SendInterval   = Properties.Settings.Default.SendInterval;
+                ViewModel.SlaveId        = Properties.Settings.Default.SlaveId;
+                ViewModel.StartAddress   = Properties.Settings.Default.StartAddress;
+                ViewModel.Quantity       = Properties.Settings.Default.Quantity;
 
                 InputGridRow.MaxHeight = Math.Min(InputSide.ActualHeight, Height - 200);
 
@@ -433,11 +574,6 @@ namespace WPFModbus.Views
                 "Text" => ViewModel.SelectedEncoding.GetString( HexStringToByteArray.Convert(Input_TBx.Text) ),
                 _ => BitConverter.ToString( ViewModel.SelectedEncoding.GetBytes(Input_TBx.Text) ).Replace('-', ' ')
             };
-        }
-
-        private void SendMode_RB_Click(object sender, RoutedEventArgs e)
-        {
-
         }
     }
 }

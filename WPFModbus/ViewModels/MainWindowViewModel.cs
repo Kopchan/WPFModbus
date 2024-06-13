@@ -23,9 +23,12 @@ namespace WPFModbus.ViewModels
         [ObservableProperty] public SendDataType   sendDataType   = SendDataType.HEX;
         [ObservableProperty] public SendMode       sendMode       = SendMode.RAW;
         [ObservableProperty] public SendMBProtocol sendMBProtocol = SendMBProtocol.RTU;
-        [ObservableProperty] public SendMBFunc     sendMBFunc     = SendMBFunc.ReadCoilStatus;
-        [ObservableProperty] public bool  sendIsInterval = false;
-        [ObservableProperty] public ulong sendInterval = 1000;
+        [ObservableProperty] public SendMBFunc     sendMBFunc     = SendMBFunc.ReadCoils;
+        [ObservableProperty] public byte   slaveId      = 0;
+        [ObservableProperty] public ushort startAddress = 0;
+        [ObservableProperty] public ushort quantity     = 8;
+        [ObservableProperty] public bool   sendIsInterval = false;
+        [ObservableProperty] public ulong  sendInterval = 1000;
 
         public string SelectedEncodingName => SelectedEncoding.CodePage == 20127 
             ? "ASCII" 
