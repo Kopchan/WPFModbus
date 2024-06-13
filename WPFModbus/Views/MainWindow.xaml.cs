@@ -305,12 +305,12 @@ namespace WPFModbus.Views
                     bool  [] bools   = [];
                     ushort[] ushorts = [];
 
-                    bool  [] inputBools = [];
-                    ushort[] inputUshorts = [];
+                    List<bool> inputBools   = [];
+                    ushort[]   inputUshorts = [];
 
                     if (ViewModel.SendMBFunc == SendMBFunc.WriteCoils)
                         for (var i = 0; i < input.Length; i++)
-                            inputBools[i] = Convert.ToBoolean(Convert.ToString(input[i]));
+                            inputBools.Add(Convert.ToInt16(input[i].ToString()) == 1);
 
                     if (ViewModel.SendMBFunc == SendMBFunc.WriteRegisters) 
                     {
@@ -328,12 +328,12 @@ namespace WPFModbus.Views
 
                     switch (ViewModel.SendMBFunc)
                     {
-                        case SendMBFunc.ReadCoils           : bools   = master.ReadCoils             (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
-                        case SendMBFunc.ReadInputs          : bools   = master.ReadInputs            (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
-                        case SendMBFunc.ReadHoldingRegisters: ushorts = master.ReadHoldingRegisters  (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
-                        case SendMBFunc.ReadInputRegisters  : ushorts = master.ReadInputRegisters    (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity); break;
-                        case SendMBFunc.WriteCoils          :           master.WriteMultipleCoils    (ViewModel.SlaveId, ViewModel.StartAddress, inputBools        ); break;
-                        case SendMBFunc.WriteRegisters      :           master.WriteMultipleRegisters(ViewModel.SlaveId, ViewModel.StartAddress, inputUshorts      ); break;
+                        case SendMBFunc.ReadCoils           : bools   = master.ReadCoils             (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity  ); break;
+                        case SendMBFunc.ReadInputs          : bools   = master.ReadInputs            (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity  ); break;
+                        case SendMBFunc.ReadHoldingRegisters: ushorts = master.ReadHoldingRegisters  (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity  ); break;
+                        case SendMBFunc.ReadInputRegisters  : ushorts = master.ReadInputRegisters    (ViewModel.SlaveId, ViewModel.StartAddress, ViewModel.Quantity  ); break;
+                        case SendMBFunc.WriteCoils          :           master.WriteMultipleCoils    (ViewModel.SlaveId, ViewModel.StartAddress, inputBools.ToArray()); break;
+                        case SendMBFunc.WriteRegisters      :           master.WriteMultipleRegisters(ViewModel.SlaveId, ViewModel.StartAddress, inputUshorts        ); break;
                     }
 
                     string output = "";
@@ -357,25 +357,27 @@ namespace WPFModbus.Views
 
                     // Очистка ошибки
                     ViewModel.ErrorMessage = "";
-                }
+            }
                 catch (Exception ex)
                 {
-                    // Таймаут или другие ошибки
-                    if (ViewModel.IsSending) ViewModel.ErrorMessage =
-                        "Ошибка при отправке: " + ex switch
-                        {
-                            TimeoutException => "Время ожидания вышло",
-                            UnauthorizedAccessException => "Порт недоступен/закрыт",
-                            FileNotFoundException => "Порт не найден",
-                            _ => ex.Message
-                        };
-                }
+                // Таймаут или другие ошибки
+                if (ViewModel.IsSending) ViewModel.ErrorMessage =
+                    "Ошибка при отправке: " + ex switch
+                    {
+                        TimeoutException => "Время ожидания вышло. Возможно данного слейва не существует",
+                        UnauthorizedAccessException => "Порт недоступен/закрыт",
+                        FileNotFoundException => "Порт не найден",
+                        SlaveException => "Вы уверены что этот адрес и этот слейв принимает данную функцию?",
+                        IOException => "Ошибка проверки хеш-суммы. Вы уверены, что это на этом COM-порту Modbus устройство?",
+                        _ => ex.Message
+                    };
+            }
                 finally
                 {
-                    // Переключение статуса
-                    ViewModel.IsSending = false;
-                }
-            });
+                // Переключение статуса
+                ViewModel.IsSending = false;
+            }
+        });
         }
 
         // Открытие настроек, отключаясь от порта
@@ -570,7 +572,6 @@ namespace WPFModbus.Views
 
             Input_TBx.Text = rb.Tag switch
             {
-                // FIXME: Encoding.GetEncoding(1251) может что-то сломать?
                 "Text" => ViewModel.SelectedEncoding.GetString( HexStringToByteArray.Convert(Input_TBx.Text) ),
                 _ => BitConverter.ToString( ViewModel.SelectedEncoding.GetBytes(Input_TBx.Text) ).Replace('-', ' ')
             };

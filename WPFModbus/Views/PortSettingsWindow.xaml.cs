@@ -44,7 +44,8 @@ namespace WPFModbus.Views
         {
             try
             {
-                Properties.Settings.Default.PortName = Ports_CB.SelectedItem?.ToString() ?? Ports_CB.Items[0]?.ToString() ?? "";
+                try { Properties.Settings.Default.PortName = Ports_CB?.SelectedItem?.ToString() ?? Ports_CB?.Items[0]?.ToString() ?? ""; }
+                catch { throw new Exception("Необходимен COM порт для продолжения"); }
                 Properties.Settings.Default.PortParity = ((Models.Parity)Parity_CB.SelectedItem).Code;
                 Properties.Settings.Default.PortBaudrate = Int32.TryParse(Baudrate_CB.Text, out int baudrate) ? baudrate : throw new Exception("Введите число в качестве скорости");
                 Properties.Settings.Default.PortTimeout  = Int32.TryParse( Timeout_CB.Text, out int timeout ) ? timeout  : throw new Exception("Введите число в качестве таймаута");
